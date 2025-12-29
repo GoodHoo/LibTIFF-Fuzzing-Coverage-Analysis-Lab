@@ -1,0 +1,5 @@
+# environment variables:
+AFL_AUTORESUME=1
+AFL_KILL_SIGNAL=9
+# command line:
+'afl-fuzz' '-m' 'none' '-i' '/home/g/Desktop/Fuzz/training/fuzzing_libtiff/tiff-4.0.4/test/images/' '-o' '/home/g/Desktop/Fuzz/training/fuzzing_libtiff/out/' '-s' '123' '--' '/home/g/Desktop/Fuzz/training/fuzzing_libtiff/install/bin/tiffinfo' '-D' '-j' '-c' '-r' '-s' '-w' '@@'
