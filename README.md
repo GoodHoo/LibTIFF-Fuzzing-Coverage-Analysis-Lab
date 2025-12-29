@@ -25,8 +25,6 @@
 
 ```bash
 # 更新软件源并安装基础编译依赖
-# build-essential: 包含 gcc, make 等基础工具
-# libtool, automake: 自动化编译配置工具
 sudo apt-get update
 sudo apt-get install -y build-essential wget git libtool automake flex bison
 
@@ -35,7 +33,6 @@ git clone [https://github.com/google/AFL.git](https://github.com/google/AFL.git)
 cd AFL
 
 # 编译 AFL (包含核心工具 afl-gcc, afl-fuzz, afl-showmap 等)
-# 这一步会生成 afl-gcc (插桩编译器), afl-fuzz (测试主程序) 等工具
 make
 sudo make install
 ```
@@ -64,8 +61,7 @@ tar -xzvf tiff-4.0.4.tar.gz
 # 3. 编译 LibTIFF
 cd tiff-4.0.4/
 
-# --prefix: 指定安装路径，方便后续管理
-# --disable-shared: 禁用动态库，强制静态链接，这对 Fuzz 更有利
+# --disable-shared: 禁用动态库，强制静态链接
 ./configure --prefix="$HOME/Desktop/Fuzz/training/fuzzing_libtiff/install/" --disable-shared
 make -j$(nproc)
 make install
@@ -83,7 +79,7 @@ cd $HOME/Desktop/Fuzz/training/fuzzing_libtiff/install/bin
 
 ## 3. 代码覆盖率工具 (LCOV) 安装
 
-**代码覆盖率 (Code Coverage)** 能够展示 Fuzzer 已经到达了代码的哪些部分，并可视化 Fuzzing 过程。本次实验使用 `lcov` 来生成 HTML 报告。
+**代码覆盖率 (Code Coverage)** 能够展示 Fuzzer 已经到达了代码的哪些部分，并可视化 Fuzzing 过程。实验使用 `lcov` 来生成 HTML 报告。
 
 ```bash
 # install
@@ -129,10 +125,6 @@ lcov --zerocounters --directory ./   # 重置计数器
 lcov --capture --initial --directory ./ --output-file app.info # 捕获初始状态 (基准线)
 
 # 4. 开始 Fuzzing
-# -i: 输入用例目录 (seed)
-# -o: 输出结果目录
-# -s: 随机种子 (复现用)
-# @@: AFL 占位符
 afl-fuzz -m none -i $HOME/Desktop/Fuzz/training/fuzzing_libtiff/tiff-4.0.4/test/images/ -o $HOME/Desktop/Fuzz/training/fuzzing_libtiff/out/ -s 123 -- $HOME/Desktop/Fuzz/training/fuzzing_libtiff/install/bin/tiffinfo -D -j -c -r -s -w @@
 ```
 
@@ -141,7 +133,6 @@ afl-fuzz -m none -i $HOME/Desktop/Fuzz/training/fuzzing_libtiff/tiff-4.0.4/test/
 > ![AFL Running](images/afl_running.png)
 >
 > - `total crashes`: 显示已发现的崩溃数量（图示中发现了 21 个，保存了 13 个）。
-> - `exec speed`: 执行速度。
 
 Fuzz 一段时间后，按 `Ctrl+C` 停止。
 
@@ -181,7 +172,7 @@ genhtml --highlight --legend -output-directory ./html-coverage/ ./app2.info
 
 ![Source View](images/coverage_source.png)
 
-> 💡 例如 `tif_dir.c` 覆盖了 41.3%，而 `tif_compress.c` 只有 27.6%。如果想发现压缩算法的漏洞，就需要优化测试用例以提高该文件的覆盖率。
+> 💡 例如 `tif_dir.c` 覆盖了 41.3%，而 `tif_compress.c` 只有 27.6%。
 
 #### 3. 代码行详情
 
@@ -210,17 +201,15 @@ cd $HOME/Desktop/Fuzz/training/fuzzing_libtiff/out/default/crashes
 >
 > ![ASan Output](images/asan_output.png)
 
-- **ERROR**: `heap-buffer-overflow` (堆缓冲区溢出)。
-- **Location**: 问题发生在 `_interceptor_fputs` 及 `TIFFPrintField` 函数中。
-- **Shadow bytes**: 内存映射图展示了溢出发生的具体内存地址状态。
-
+通过ASan的定位，我们可以知道，存在一个heap-buffer-overflow (堆缓冲区溢出)的问题，且问题发生在 _interceptor_fputs 及 TIFFPrintField 函数中。内存映射图展示了溢出发生的具体内存地址状态。
 通过这个堆栈跟踪 (Stack Trace)，开发人员可以精确定位到是哪一行代码处理恶意 TIFF 文件时发生了越界写入。
+现在可以在重现 crash 的前提下，再加上 lcov 提供的代码覆盖率，就可以更轻松地去定位漏洞触发的原因了。
 
 ------
 
 ## 6. 总结
 
-1. **覆盖率引导优化**: 单纯运行 AFL 只能看到"崩溃了"，但通过 LCOV 我们能看到"测了哪里，没测哪里"。如果核心功能代码全是红色的（未执行），说明我们的初始种子 (Seed) 选得不好，或者参数配置有误。
+1. **覆盖率引导优化**: 单纯运行 AFL 只能看到"崩溃了"，但通过 LCOV 我们能看到"测了哪里，没测哪里"。
 2. **性能权衡**: 在测试中，我们使用了 `gcc` 配合 `--coverage` 进行编译。这会显著降低 Fuzz 的执行速度。一种思路是先用高性能模式 (不带 coverage) 跑出大量路径，然后偶尔用带 coverage 的版本跑一次现有语料库 (Corpus) 以评估进度。
 3. **ASan 的重要性**: 如果不开启 ASan，很多内存越界读取可能不会导致程序立即崩溃 (Crash)，从而被 Fuzzer 忽略。开启 ASan 虽然消耗内存，但能让漏洞发现率成倍提升。
 
@@ -233,7 +222,7 @@ cd $HOME/Desktop/Fuzz/training/fuzzing_libtiff/out/default/crashes
 ### 🛠️ 工具与文档
 
 * **AFL (American Fuzzy Lop)**: [Google/AFL GitHub](https://github.com/google/AFL) - 本教程使用的核心 Fuzzing 工具。特别感谢 **Google AFL Team** 开发了如此强大的测试工具。
-* **LCOV**: [LCOV Documentation](http://ltp.sourceforge.net/coverage/lcov.php) - GCC 代码覆盖率前端工具。
+* **LCOV**: [LCOV Documentation](https://lcov.readthedocs.io/en/latest/index.html) - GCC 代码覆盖率前端工具。
 * **AddressSanitizer (ASan)**: [Google Sanitizers Wiki](https://github.com/google/sanitizers/wiki/AddressSanitizer) - 用于检测内存错误的编译器插件。
 
 ### 🎯 目标软件
