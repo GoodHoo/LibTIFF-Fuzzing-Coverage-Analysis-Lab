@@ -13,8 +13,8 @@
 - [3. 代码覆盖率工具 (LCOV)](#3-代码覆盖率工具-lcov-安装)
 - [4. 带覆盖率统计的 Fuzzing](#4-带覆盖率统计的-fuzzing)
 - [5. 结果分析](#5-结果分析)
-    - [代码覆盖率报告](#代码覆盖率报告)
-    - [Crash 崩溃分析](#crash-崩溃分析)
+  - [代码覆盖率报告](#代码覆盖率报告)
+  - [Crash 崩溃分析](#crash-崩溃分析)
 - [6. 总结](#6-总结)
 
 ---
@@ -41,6 +41,8 @@ sudo make install
 ```
 
 > **✅ 验证安装**：编译过程如下图所示，看到 `Build distributed successfully` 即表示 AFL 安装完成。
+>
+> ![AFL安装成功](images/afl_install_success.png)
 
 ------
 
@@ -74,6 +76,8 @@ cd $HOME/Desktop/Fuzz/training/fuzzing_libtiff/install/bin
 ```
 
 > **✅ 验证测试**：出现以下情况，LibTIFF 已正确安装并能正常解析 TIFF 文件，即为测试成功：
+>
+> ![LibTIFF测试](images/libtiff_test.png)
 
 ------
 
@@ -91,6 +95,8 @@ lcov --help
 ```
 
 > **✅ 验证安装**：执行 help 命令后，出现如下图所示的帮助信息，即代表安装成功。
+>
+> ![LCOV Help](images/lcov_help.png)
 
 ------
 
@@ -132,6 +138,8 @@ afl-fuzz -m none -i $HOME/Desktop/Fuzz/training/fuzzing_libtiff/tiff-4.0.4/test/
 
 > **🖥️ 运行状态**：AFL 运行界面如下图所示。
 >
+> ![AFL Running](images/afl_running.png)
+>
 > - `total crashes`: 显示已发现的崩溃数量（图示中发现了 21 个，保存了 13 个）。
 > - `exec speed`: 执行速度。
 
@@ -147,6 +155,8 @@ genhtml --highlight --legend -output-directory ./html-coverage/ ./app2.info
 ```
 
 > **📊 数据收集**：收集过程如下图所示，可以看到它正在处理各个 `.gcda` 文件。
+>
+> ![LCOV Generating](images/lcov_generating.png)
 
 ------
 
@@ -158,6 +168,8 @@ genhtml --highlight --legend -output-directory ./html-coverage/ ./app2.info
 
 #### 1. 总览 (Overview)
 
+![Coverage Overview](images/coverage_overview.png)
+
 可以看到整体的行覆盖率 (Line Coverage) 和函数覆盖率 (Functions)。
 
 - 🟥 **红色条**: 覆盖率低 (Low)。
@@ -167,11 +179,15 @@ genhtml --highlight --legend -output-directory ./html-coverage/ ./app2.info
 
 列出了 `libtiff` 目录下每个 `.c` 文件的具体覆盖情况。
 
+![Source View](images/coverage_source.png)
+
 > 💡 例如 `tif_dir.c` 覆盖了 41.3%，而 `tif_compress.c` 只有 27.6%。如果想发现压缩算法的漏洞，就需要优化测试用例以提高该文件的覆盖率。
 
 #### 3. 代码行详情
 
 点击具体文件（如 `tif_close.c` 或 `tif_unix.c`），可以看到源代码视图。
+
+![exec_pro](images/exec_pro.png)
 
 - **蓝色背景**: 表示该行被执行了。
 - **红色背景**: 表示未被执行。
@@ -191,6 +207,8 @@ cd $HOME/Desktop/Fuzz/training/fuzzing_libtiff/out/default/crashes
 ```
 
 > **🐞 ASan 追踪结果**: 运行后，ASan 捕获异常并输出详细报告。
+>
+> ![ASan Output](images/asan_output.png)
 
 - **ERROR**: `heap-buffer-overflow` (堆缓冲区溢出)。
 - **Location**: 问题发生在 `_interceptor_fputs` 及 `TIFFPrintField` 函数中。
@@ -213,14 +231,17 @@ cd $HOME/Desktop/Fuzz/training/fuzzing_libtiff/out/default/crashes
 本教程的部分步骤和思路参考了以下优秀的开源资源：
 
 ### 🛠️ 工具与文档
+
 * **AFL (American Fuzzy Lop)**: [Google/AFL GitHub](https://github.com/google/AFL) - 本教程使用的核心 Fuzzing 工具。特别感谢 **Google AFL Team** 开发了如此强大的测试工具。
 * **LCOV**: [LCOV Documentation](http://ltp.sourceforge.net/coverage/lcov.php) - GCC 代码覆盖率前端工具。
 * **AddressSanitizer (ASan)**: [Google Sanitizers Wiki](https://github.com/google/sanitizers/wiki/AddressSanitizer) - 用于检测内存错误的编译器插件。
 
 ### 🎯 目标软件
+
 * **LibTIFF**: [Official Website](http://www.libtiff.org/) - LibTIFF 官方网站。
 * **Source Code**: [LibTIFF 4.0.4 Download](https://download.osgeo.org/libtiff/tiff-4.0.4.tar.gz) - 本教程使用的具体版本源码。
 
 ### 📚 扩展阅读
+
 * **AFL README**: [AFL Technical Details](https://github.com/google/AFL/blob/master/docs/technical_details.txt) - 深入了解 AFL 的工作原理。
 * **Fuzzing 101**: [GitHub - antonio-morales/Fuzzing101](https://github.com/antonio-morales/Fuzzing101) - 提供了基础的 Fuzzing 流程思路。更多关于 LibTIFF 和其他目标的 Fuzzing 练习。
